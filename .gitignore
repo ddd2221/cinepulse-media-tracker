@@ -1,0 +1,18 @@
+# Local-only study material (never commit)
+LEARNING_GUIDE.md
+
+# Secrets
+.env
+.env.local
+
+# Dependencies & build output
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Logs / OS / editor
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
