@@ -29,6 +29,23 @@
   }
 }
 
+/* Custom sleek scrollbar for cinema theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #07080d;
+}
+::-webkit-scrollbar-thumb {
+  background: #1d2133;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2a2f47;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
