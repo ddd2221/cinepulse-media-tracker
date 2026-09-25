@@ -26,11 +26,11 @@ export default function AuthModal({ backendAvailable, error, onClose, onGoogle, 
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4 backdrop-blur-sm" onMouseDown={(e) => e.target === e.currentTarget && onClose()} onKeyDown={(e) => e.key === 'Escape' && onClose()}>
-      <div role="dialog" aria-modal="true" aria-labelledby="auth-title" className="glass animate-fadeUp w-full max-w-md rounded-2xl p-6">
+      <div role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-description" className="glass animate-fadeUp w-full max-w-md rounded-2xl p-6">
         <div className="mb-5 flex items-start justify-between">
           <div>
             <h2 id="auth-title" className="text-xl font-extrabold text-white">Welcome to Cine<span className="text-pulse-400">Pulse</span></h2>
-            <p className="text-sm text-slate-400">Sign in to sync your watchlist across devices.</p>
+            <p id="auth-description" className="text-sm text-slate-400">Sign in to sync your watchlist across devices.</p>
           </div>
           <button onClick={onClose} aria-label="Close" className="rounded p-1 text-slate-400 hover:text-white"><X size={20} /></button>
         </div>
