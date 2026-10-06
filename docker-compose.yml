@@ -1,0 +1,11 @@
+services:
+  cinepulse:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cinepulse-app
+    ports:
+      - "8080:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
