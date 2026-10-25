@@ -72,10 +72,10 @@ export default function MediaCard({
   };
 
   return (
-    <article className="group relative flex flex-col space-y-2 transition-all duration-150">
+    <article className="group relative flex flex-col space-y-2 transition-all duration-150 transform-gpu will-change-transform">
       {/* 2:3 Poster Frame: 6px rounded, ring-1 ring-white/10, amber glow on hover */}
       <div
-        className="poster-card cursor-pointer bg-[#121318]"
+        className="poster-card cursor-pointer bg-[#121318] transform-gpu will-change-transform"
         onClick={() => {
           if (tracked && onEdit) onEdit(tracked);
           else if (onAdd) onAdd(media, 'plan_to_watch');
@@ -86,6 +86,8 @@ export default function MediaCard({
             src={media.poster}
             alt={`${media.title} poster`}
             loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
             onError={() => setImageError(true)}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
           />
@@ -125,14 +127,14 @@ export default function MediaCard({
 
         {/* Monospace Rating Badge (Top Right) */}
         {displayRating && (
-          <div className="absolute top-1.5 right-1.5 flex items-center rounded bg-black/80 px-1.5 py-0.5 font-mono text-[10px] font-bold text-amber-400 backdrop-blur-md border border-white/10 z-10">
+          <div className="absolute top-1.5 right-1.5 flex items-center rounded bg-black/90 px-1.5 py-0.5 font-mono text-[10px] font-bold text-amber-400 border border-white/10 z-10 shadow-sm">
             <span>{displayRating}</span>
           </div>
         )}
 
-        {/* CinePulse Frosted Glass Bottom Dock (Revealed on Hover) */}
+        {/* CinePulse High-Contrast Dock (Revealed on Hover - Optimized for Gecko GPU compositing) */}
         <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/90 via-black/30 to-transparent p-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-          <div className="flex items-center justify-around rounded-md bg-[#0a0a0c]/85 p-1 backdrop-blur-md border border-white/15 shadow-xl">
+          <div className="flex items-center justify-around rounded-md bg-[#0a0a0c]/95 p-1 border border-white/15 shadow-xl">
             <button
               type="button"
               onClick={handleEyeClick}

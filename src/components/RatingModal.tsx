@@ -76,6 +76,9 @@ export default function RatingModal({ item, onSave, onRemove, onClose }: Props) 
               <img
                 src={item.poster}
                 alt={item.title}
+                loading="lazy"
+                decoding="async"
+                referrerPolicy="no-referrer"
                 className="h-16 w-11 object-cover rounded-md border border-white/[0.1] shadow"
               />
             )}

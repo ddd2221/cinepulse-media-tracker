@@ -6,6 +6,8 @@
   html {
     color-scheme: dark;
     background-color: #0a0a0c;
+    scrollbar-width: thin;
+    scrollbar-color: #27272a #0a0a0c;
   }
   body {
     background-color: #0a0a0c;
@@ -58,9 +60,12 @@
     @apply w-full rounded-md border border-white/[0.08] bg-[#121318] px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50;
   }
 
-  /* Poster Card Frame */
+  /* Poster Card Frame: GPU composited with hardware acceleration for Gecko and WebKit */
   .poster-card {
     @apply relative aspect-[2/3] overflow-hidden rounded-md border border-white/[0.08] ring-1 ring-white/10 transition-all duration-200 hover:-translate-y-1 hover:ring-2 hover:ring-amber-400/80 hover:shadow-xl hover:shadow-black/70;
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
 
   /* Shimmer skeleton */

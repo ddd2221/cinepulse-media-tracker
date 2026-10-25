@@ -75,6 +75,9 @@ export default function FeaturedBackdropHeader({
           key={featured.id}
           src={featured.backdropUrl}
           alt={`${featured.title} backdrop`}
+          loading="eager"
+          decoding="async"
+          referrerPolicy="no-referrer"
           className="h-full w-full object-cover object-center filter brightness-[0.75] contrast-[1.12] transition-opacity duration-700 animate-fadeIn"
         />
 
@@ -208,7 +211,14 @@ export default function FeaturedBackdropHeader({
                         : 'opacity-40 hover:opacity-90 ring-1 ring-white/10'
                     }`}
                   >
-                    <img src={item.posterUrl} alt={item.title} className="w-full h-full object-cover" />
+                    <img
+                      src={item.posterUrl}
+                      alt={item.title}
+                      loading="lazy"
+                      decoding="async"
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover"
+                    />
                   </button>
                 ))}
               </div>
