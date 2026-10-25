@@ -25,36 +25,121 @@ export default function AuthModal({ backendAvailable, error, onClose, onGoogle, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4 backdrop-blur-sm" onMouseDown={(e) => e.target === e.currentTarget && onClose()} onKeyDown={(e) => e.key === 'Escape' && onClose()}>
-      <div role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-description" className="glass animate-fadeUp w-full max-w-md rounded-2xl p-6">
-        <div className="mb-5 flex items-start justify-between">
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-4 backdrop-blur-sm"
+      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-title"
+        aria-describedby="auth-description"
+        className="w-full max-w-md rounded-sm border border-[#2c3440] bg-[#1f252c] p-6 shadow-2xl animate-fadeUp"
+      >
+        <div className="mb-5 flex items-start justify-between border-b border-[#2c3440] pb-3">
           <div>
-            <h2 id="auth-title" className="text-xl font-extrabold text-white">Welcome to Cine<span className="text-pulse-400">Pulse</span></h2>
-            <p id="auth-description" className="text-sm text-slate-400">Sign in to sync your watchlist across devices.</p>
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="h-2 w-2 rounded-full bg-[#ff8000]" />
+              <span className="h-2 w-2 rounded-full bg-[#00e054]" />
+              <span className="h-2 w-2 rounded-full bg-[#40bcf4]" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#00e054] ml-1">
+                ACCOUNT & SYNC
+              </span>
+            </div>
+            <h2 id="auth-title" className="font-serif text-xl font-bold text-white">
+              Welcome to Cine<span className="text-[#00e054]">Pulse</span>
+            </h2>
+            <p id="auth-description" className="text-xs text-[#99aabb]">
+              Sign in to sync your film diary & ratings across devices.
+            </p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="rounded p-1 text-slate-400 hover:text-white"><X size={20} /></button>
+          <button onClick={onClose} aria-label="Close" className="rounded-sm p-1 text-[#667788] hover:bg-[#2c3440] hover:text-white">
+            <X size={18} />
+          </button>
         </div>
 
-        <button className="btn-primary mb-3 w-full" onClick={onGuest}><Play size={16} /> Continue as Guest (instant demo)</button>
+        <button
+          type="button"
+          className="lb-btn-green mb-3 w-full py-2.5 font-bold text-xs"
+          onClick={onGuest}
+        >
+          <Play size={15} fill="currentColor" />
+          <span>Continue as Guest (Instant Recruiter Demo)</span>
+        </button>
 
-        <div className="my-4 flex items-center gap-3 text-xs uppercase tracking-widest text-slate-600">
-          <span className="h-px flex-1 bg-white/10" /> or <span className="h-px flex-1 bg-white/10" />
+        <div className="my-4 flex items-center gap-3 text-[10px] uppercase tracking-[0.2em] text-[#667788]">
+          <span className="h-px flex-1 bg-[#2c3440]" /> OR <span className="h-px flex-1 bg-[#2c3440]" />
         </div>
 
-        <button className="btn-ghost mb-4 w-full" onClick={onGoogle} disabled={!backendAvailable}><Chrome size={16} /> Continue with Google</button>
+        <button
+          type="button"
+          className="lb-btn-ghost mb-4 w-full py-2"
+          onClick={onGoogle}
+          disabled={!backendAvailable}
+        >
+          <Chrome size={15} />
+          <span>Continue with Google</span>
+        </button>
 
         <form onSubmit={submit} className="space-y-3">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400" htmlFor="auth-email">Email</label>
-          <input id="auth-email" type="email" required className="input" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" disabled={!backendAvailable} />
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400" htmlFor="auth-password">Password</label>
-          <input id="auth-password" type="password" required minLength={6} className="input" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} disabled={!backendAvailable} />
-          <button type="submit" className="btn-ghost w-full" disabled={!backendAvailable || busy}><Mail size={16} /> {mode === 'signin' ? 'Sign in' : 'Create account'}</button>
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#99aabb] mb-1" htmlFor="auth-email">
+              Email
+            </label>
+            <input
+              id="auth-email"
+              type="email"
+              required
+              className="lb-input text-xs"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              disabled={!backendAvailable}
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#99aabb] mb-1" htmlFor="auth-password">
+              Password
+            </label>
+            <input
+              id="auth-password"
+              type="password"
+              required
+              minLength={6}
+              className="lb-input text-xs"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+              disabled={!backendAvailable}
+            />
+          </div>
+          <button
+            type="submit"
+            className="lb-btn-ghost w-full py-2"
+            disabled={!backendAvailable || busy}
+          >
+            <Mail size={15} />
+            <span>{mode === 'signin' ? 'Sign in' : 'Create account'}</span>
+          </button>
         </form>
 
-        {error && <p role="alert" className="mt-3 rounded-lg bg-pulse-500/10 p-2 text-sm text-pulse-400">{error}</p>}
-        {!backendAvailable && <p className="mt-3 text-xs text-slate-500">Supabase keys not found in <code>.env</code> – Google and email auth are disabled. Guest mode stores data in your browser.</p>}
+        {error && (
+          <p role="alert" className="mt-3 rounded-sm border border-red-500/30 bg-red-500/10 p-2 text-xs text-red-400">
+            {error}
+          </p>
+        )}
+        {!backendAvailable && (
+          <p className="mt-3 text-[11px] text-[#667788]">
+            Supabase keys not detected in <code>.env</code>. Guest Demo Mode stores all watchlists, ratings, and stats directly in your browser.
+          </p>
+        )}
 
-        <button className="mt-4 w-full text-center text-sm text-slate-400 hover:text-white" onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>
+        <button
+          type="button"
+          className="mt-4 w-full text-center text-xs text-[#99aabb] hover:text-[#00e054] transition"
+          onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
+        >
           {mode === 'signin' ? "Don't have an account? Sign up" : 'Already registered? Sign in'}
         </button>
       </div>

@@ -1,7 +1,8 @@
+import { Heart } from 'lucide-react';
 import type { UserMediaItem, WatchStatus } from '../types/media';
-import { STATUS_LABELS, WATCH_STATUSES } from '../types/media';
+import { STATUS_LABELS } from '../types/media';
 
-export type TabId = WatchStatus | 'all';
+export type TabId = WatchStatus | 'all' | 'liked';
 
 interface Props {
   active: TabId;
@@ -10,37 +11,48 @@ interface Props {
 }
 
 export default function WatchlistTabs({ active, onChange, items }: Props) {
-  const tabs: { id: TabId; label: string; count: number }[] = [
-    { id: 'all', label: 'All', count: items.length },
-    ...WATCH_STATUSES.map((s) => ({ id: s as TabId, label: STATUS_LABELS[s], count: items.filter((i) => i.status === s).length })),
+  const likedCount = items.filter((i) => i.liked).length;
+
+  const tabs: { id: TabId; label: string; count: number; icon?: typeof Heart }[] = [
+    { id: 'all', label: 'All Diary', count: items.length },
+    { id: 'completed', label: STATUS_LABELS.completed, count: items.filter((i) => i.status === 'completed').length },
+    { id: 'watching', label: STATUS_LABELS.watching, count: items.filter((i) => i.status === 'watching').length },
+    { id: 'plan_to_watch', label: STATUS_LABELS.plan_to_watch, count: items.filter((i) => i.status === 'plan_to_watch').length },
+    { id: 'liked', label: 'Liked', count: likedCount, icon: Heart },
+    { id: 'dropped', label: STATUS_LABELS.dropped, count: items.filter((i) => i.status === 'dropped').length },
   ];
 
-  const onKey = (e: React.KeyboardEvent, index: number) => {
-    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-    const next = (index + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
-    onChange(tabs[next].id);
-    (e.currentTarget.parentElement?.children[next] as HTMLElement | undefined)?.focus();
-  };
-
   return (
-    <div role="tablist" aria-label="Watchlist status" className="flex gap-2 overflow-x-auto pb-1">
-      {tabs.map((t, i) => (
-        <button
-          key={t.id}
-          role="tab"
-          id={`tab-${t.id}`}
-          aria-selected={active === t.id}
-          tabIndex={active === t.id ? 0 : -1}
-          onKeyDown={(e) => onKey(e, i)}
-          onClick={() => onChange(t.id)}
-          className={`flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
-            active === t.id ? 'bg-pulse-500 text-white shadow-lg shadow-pulse-500/20' : 'bg-white/5 text-slate-300 hover:bg-white/10'
-          }`}
-        >
-          {t.label}
-          <span className={`rounded-full px-2 text-xs ${active === t.id ? 'bg-white/20' : 'bg-white/10 text-slate-400'}`}>{t.count}</span>
-        </button>
-      ))}
+    <div role="tablist" aria-label="Watchlist categories" className="flex items-center gap-1.5 overflow-x-auto pb-1">
+      {tabs.map((t) => {
+        const Icon = t.icon;
+        const isActive = active === t.id;
+
+        return (
+          <button
+            key={t.id}
+            role="tab"
+            id={`tab-${t.id}`}
+            aria-selected={isActive}
+            onClick={() => onChange(t.id)}
+            className={`flex shrink-0 items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition ${
+              isActive
+                ? 'bg-[#00e054] text-[#14181c] shadow-sm'
+                : 'border border-[#2c3440] bg-[#1f252c] text-[#99aabb] hover:border-[#455566] hover:text-white'
+            }`}
+          >
+            {Icon && <Icon size={12} fill={isActive ? '#14181c' : '#ff8000'} className={isActive ? 'text-[#14181c]' : 'text-[#ff8000]'} />}
+            <span>{t.label}</span>
+            <span
+              className={`rounded-[2px] px-1 text-[10px] ${
+                isActive ? 'bg-[#14181c]/20 text-[#14181c] font-black' : 'bg-[#14181c] text-[#667788]'
+              }`}
+            >
+              {t.count}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
