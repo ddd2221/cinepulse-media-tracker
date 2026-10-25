@@ -11,22 +11,21 @@ const TMDB_KEY = (import.meta.env.VITE_TMDB_API_KEY as string | undefined)?.trim
 export const isTmdbConfigured = Boolean(TMDB_KEY) && TMDB_KEY !== 'your-tmdb-key';
 
 /* ------------------------------------------------------------------ */
-/* Helpers                                                            */
+/* Helper Functions                                                   */
 /* ------------------------------------------------------------------ */
 const stripHtml = (html?: string): string =>
   html ? html.replace(/<[^>]*>?/gm, '').trim() : '';
 
-const normalizeTitle = (t: string): string =>
+export const normalizeTitle = (t: string): string =>
   t.toLowerCase().replace(/[^a-z0-9]/g, '');
 
 const upgradeItunesArtwork = (url?: string): string | null => {
   if (!url) return null;
-  // Replace 100x100bb with 600x900bb for high-resolution theatrical poster
   return url.replace(/\/\d+x\d+bb\./, '/600x900bb.').replace('100x100bb', '600x900bb');
 };
 
 /* ------------------------------------------------------------------ */
-/* SOURCE 4: Curated Verified Masterpieces & Hero Backdrops            */
+/* CURATED MASTERPIECES & HERO BACKDROPS                              */
 /* ------------------------------------------------------------------ */
 export const FEATURED_HERO_BACKDROPS: FeaturedBackdrop[] = [
   {
@@ -140,6 +139,30 @@ export const CURATED_MASTERPIECES: MediaSummary[] = [
     rating: 8.6,
     genres: ['Action', 'Adventure', 'Sci-Fi'],
     overview: 'Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family.',
+    source: 'seed',
+  },
+  {
+    imdbID: 'tt1160419',
+    title: 'Dune',
+    year: '2021',
+    type: 'movie',
+    poster: 'https://m.media-amazon.com/images/M/MV5BNWIyNmU5MGYtZDZmNi00ZjAwLWJlYjgtZTc0ZGIxMDE4ZGYwXkEyXkFqcGc@._V1_.jpg',
+    director: 'Denis Villeneuve',
+    rating: 8.0,
+    genres: ['Action', 'Adventure', 'Sci-Fi'],
+    overview: 'A noble family becomes embroiled in a war for control over the galaxy’s most valuable asset while its heir becomes troubled by visions of a dark future.',
+    source: 'seed',
+  },
+  {
+    imdbID: 'tt0087182',
+    title: 'Dune',
+    year: '1984',
+    type: 'movie',
+    poster: 'https://m.media-amazon.com/images/M/MV5BMGJlMGM3NDAtOWNhMy00MWExLWI2MzEtMDQ0ZDIzZDY5ZmQ2XkEyXkFqcGc@._V1_.jpg',
+    director: 'David Lynch',
+    rating: 6.3,
+    genres: ['Action', 'Adventure', 'Sci-Fi'],
+    overview: 'A Duke’s son leads desert warriors against the galactic emperor and his father’s evil nemesis when assassin treachery strikes.',
     source: 'seed',
   },
   {
@@ -361,7 +384,200 @@ export const CURATED_MASTERPIECES: MediaSummary[] = [
 ];
 
 /* ------------------------------------------------------------------ */
-/* SOURCE 1: TVMaze Public API (Keyless, Instant TV Series)            */
+/* SOURCE A: IMDb Open Search API (Keyless, Official IMDb Catalog)     */
+/* ------------------------------------------------------------------ */
+interface ImdbCustomSearchItem {
+  '#TITLE'?: string;
+  '#YEAR'?: number;
+  '#IMDB_ID'?: string;
+  '#IMG_POSTER'?: string;
+  '#ACTORS'?: string;
+  '#RANK'?: number;
+}
+
+interface ImdbOfficialSuggestionItem {
+  id: string;
+  l: string; // label (title)
+  y?: number; // year
+  q?: string; // type ('feature', 'TV series', 'TV mini-series', etc.)
+  s?: string; // stars / actors
+  i?: { imageUrl?: string; width?: number; height?: number };
+}
+
+export async function fetchImdbSearch(query: string, signal?: AbortSignal): Promise<MediaSummary[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const cleanChar = q.toLowerCase()[0];
+  const cleanQ = q.toLowerCase().replace(/[^a-z0-9]/g, '_');
+
+  const urls = [
+    `/api/imdb/suggestion/${cleanChar}/${cleanQ}.json`,
+    `https://v2.sg.media-imdb.com/suggestion/${cleanChar}/${cleanQ}.json`,
+    `https://imdb.iamidiotareyoutoo.com/search?q=${encodeURIComponent(q)}`,
+  ];
+
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { signal });
+      if (!res.ok) continue;
+      const data = await res.json();
+
+      // Official IMDb format
+      if (data && Array.isArray(data.d)) {
+        return (data.d as ImdbOfficialSuggestionItem[])
+          .filter((item) => Boolean(item.l && item.id))
+          .map<MediaSummary>((item) => {
+            const isTv = item.q ? item.q.toLowerCase().includes('tv') || item.q.toLowerCase().includes('series') : false;
+            return {
+              imdbID: item.id,
+              title: item.l,
+              year: item.y ? String(item.y) : '',
+              type: isTv ? 'series' : 'movie',
+              poster: item.i?.imageUrl ?? null,
+              director: item.s,
+              source: 'seed',
+            };
+          });
+      }
+
+      // Alternative iamidiotareyoutoo format
+      if (data && Array.isArray(data.description)) {
+        return (data.description as ImdbCustomSearchItem[])
+          .filter((item) => Boolean(item['#TITLE'] && item['#IMDB_ID']))
+          .map<MediaSummary>((item) => ({
+            imdbID: item['#IMDB_ID']!,
+            title: item['#TITLE']!,
+            year: item['#YEAR'] ? String(item['#YEAR']) : '',
+            type: 'movie',
+            poster: item['#IMG_POSTER'] ?? null,
+            director: item['#ACTORS'],
+            source: 'seed',
+          }));
+      }
+    } catch {
+      // Try next mirror
+    }
+  }
+
+  return [];
+}
+
+/* ------------------------------------------------------------------ */
+/* SOURCE B: Apple iTunes Search API (Feature Movies + Theatrical Posters)*/
+/* ------------------------------------------------------------------ */
+interface ITunesTrack {
+  trackId: number;
+  trackName: string;
+  releaseDate?: string;
+  kind?: string;
+  wrapperType?: string;
+  artworkUrl100?: string;
+  artistName?: string;
+  primaryGenreName?: string;
+  trackTimeMillis?: number;
+  longDescription?: string;
+  shortDescription?: string;
+}
+
+interface ITunesResponse {
+  resultCount: number;
+  results: ITunesTrack[];
+}
+
+export async function fetchITunesMovies(query: string, signal?: AbortSignal): Promise<MediaSummary[]> {
+  const q = query.trim();
+  if (!q) return [];
+
+  // Try proxy first, then direct
+  const urls = [
+    `/api/itunes/search?term=${encodeURIComponent(q)}&country=US&limit=35`,
+    `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&country=US&limit=35`,
+  ];
+
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { signal });
+      if (!res.ok) continue;
+      const data = (await res.json()) as ITunesResponse;
+      if (!data.results?.length) continue;
+
+      return data.results
+        .filter((t) => Boolean(t.trackName) && (t.kind === 'feature-movie' || t.wrapperType === 'track'))
+        .map<MediaSummary>((t) => ({
+          imdbID: `itunes-${t.trackId}`,
+          title: t.trackName,
+          year: t.releaseDate ? t.releaseDate.slice(0, 4) : '',
+          type: 'movie',
+          poster: upgradeItunesArtwork(t.artworkUrl100),
+          director: t.artistName,
+          rating: null,
+          genres: t.primaryGenreName ? [t.primaryGenreName] : [],
+          overview: t.longDescription || t.shortDescription || '',
+          source: 'itunes',
+        }));
+    } catch {
+      // Try next url
+    }
+  }
+
+  return [];
+}
+
+/* ------------------------------------------------------------------ */
+/* SOURCE C: YTS Movie Catalogue API                                  */
+/* ------------------------------------------------------------------ */
+interface YtsMovie {
+  id: number;
+  imdb_code: string;
+  title: string;
+  year: number;
+  rating: number;
+  genres?: string[];
+  summary?: string;
+  description_full?: string;
+  medium_cover_image: string;
+  large_cover_image?: string;
+}
+
+export async function fetchYtsMovies(query: string, signal?: AbortSignal): Promise<MediaSummary[]> {
+  const q = query.trim();
+  if (!q) return [];
+
+  const urls = [
+    `/api/yts/api/v2/list_movies.json?query_term=${encodeURIComponent(q)}&limit=30`,
+    `https://yts.bz/api/v2/list_movies.json?query_term=${encodeURIComponent(q)}&limit=30`,
+    `https://yts.mx/api/v2/list_movies.json?query_term=${encodeURIComponent(q)}&limit=30`,
+  ];
+
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { signal });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const list = data?.data?.movies as YtsMovie[] | undefined;
+      if (!Array.isArray(list)) continue;
+
+      return list.map<MediaSummary>((m) => ({
+        imdbID: m.imdb_code || `yts-${m.id}`,
+        title: m.title,
+        year: m.year ? String(m.year) : '',
+        type: 'movie',
+        poster: m.medium_cover_image || m.large_cover_image || null,
+        rating: m.rating || null,
+        genres: m.genres || [],
+        overview: m.summary || m.description_full || '',
+        source: 'seed',
+      }));
+    } catch {
+      // Try next mirror
+    }
+  }
+
+  return [];
+}
+
+/* ------------------------------------------------------------------ */
+/* SOURCE D: TVMaze API (Keyless TV Series Catalog)                    */
 /* ------------------------------------------------------------------ */
 interface TVMazeShow {
   id: number;
@@ -384,8 +600,11 @@ interface TVMazeSearchItem {
 }
 
 export async function fetchTVMazeSearch(query: string, signal?: AbortSignal): Promise<MediaSummary[]> {
+  const q = query.trim();
+  if (!q) return [];
+
   try {
-    const res = await fetch(`https://api.tvmaze.com/search/shows?q=${encodeURIComponent(query)}`, { signal });
+    const res = await fetch(`https://api.tvmaze.com/search/shows?q=${encodeURIComponent(q)}`, { signal });
     if (!res.ok) return [];
     const data = (await res.json()) as TVMazeSearchItem[];
     return data
@@ -412,64 +631,8 @@ export async function fetchTVMazeSearch(query: string, signal?: AbortSignal): Pr
 }
 
 /* ------------------------------------------------------------------ */
-/* SOURCE 2: Apple iTunes Search API (Keyless, Instant Feature Films)  */
+/* SOURCE E: Optional OMDb API                                        */
 /* ------------------------------------------------------------------ */
-interface ITunesTrack {
-  trackId: number;
-  trackName: string;
-  releaseDate?: string;
-  kind?: string;
-  wrapperType?: string;
-  artworkUrl100?: string;
-  artistName?: string;
-  primaryGenreName?: string;
-  trackTimeMillis?: number;
-  longDescription?: string;
-  shortDescription?: string;
-}
-
-interface ITunesResponse {
-  resultCount: number;
-  results: ITunesTrack[];
-}
-
-export async function fetchITunesMovies(query: string, signal?: AbortSignal): Promise<MediaSummary[]> {
-  try {
-    // Search movies directly or general track search
-    const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=movie&limit=25`;
-    const res = await fetch(url, { signal });
-    if (!res.ok) return [];
-    const data = (await res.json()) as ITunesResponse;
-    return (data.results ?? [])
-      .filter((t) => Boolean(t.trackName))
-      .map<MediaSummary>((t) => ({
-        imdbID: `itunes-${t.trackId}`,
-        title: t.trackName,
-        year: t.releaseDate ? t.releaseDate.slice(0, 4) : '',
-        type: 'movie',
-        poster: upgradeItunesArtwork(t.artworkUrl100),
-        director: t.artistName,
-        rating: null,
-        genres: t.primaryGenreName ? [t.primaryGenreName] : [],
-        overview: t.longDescription || t.shortDescription || '',
-        source: 'itunes',
-      }));
-  } catch {
-    return [];
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/* SOURCE 3: OMDb & TMDB Layer (Enriched if keys present)             */
-/* ------------------------------------------------------------------ */
-interface OmdbItem {
-  imdbID: string;
-  Title: string;
-  Year: string;
-  Type: MediaType;
-  Poster: string;
-}
-
 export async function fetchOMDb(query: string, type?: MediaType | 'all', year?: string, signal?: AbortSignal): Promise<MediaSummary[]> {
   if (!isOmdbConfigured) return [];
   try {
@@ -480,7 +643,7 @@ export async function fetchOMDb(query: string, type?: MediaType | 'all', year?: 
     if (!res.ok) return [];
     const data = await res.json();
     if (data.Response === 'False') return [];
-    return (data.Search ?? []).map((i: OmdbItem) => ({
+    return (data.Search ?? []).map((i: { imdbID: string; Title: string; Year: string; Type: MediaType; Poster: string }) => ({
       imdbID: i.imdbID,
       title: i.Title,
       year: i.Year,
@@ -494,27 +657,133 @@ export async function fetchOMDb(query: string, type?: MediaType | 'all', year?: 
 }
 
 /* ------------------------------------------------------------------ */
-/* UNIFIED MULTI-SOURCE AGGREGATOR ENGINE                              */
+/* CATALOG BROWSE (60+ Live Titles on Load without query)             */
+/* ------------------------------------------------------------------ */
+export async function fetchBrowseCatalog(type: MediaType | 'all' = 'all', page = 1, signal?: AbortSignal): Promise<MediaSummary[]> {
+  const promises: Promise<MediaSummary[]>[] = [];
+
+  if (type === 'all' || type === 'movie') {
+    // Fetch popular movies page from YTS
+    const ytsUrl = `/api/yts/api/v2/list_movies.json?limit=30&page=${page}&sort_by=download_count`;
+    const ytsFallback = `https://yts.bz/api/v2/list_movies.json?limit=30&page=${page}&sort_by=download_count`;
+
+    promises.push(
+      fetch(ytsUrl, { signal })
+        .then((r) => r.json())
+        .then((d) => {
+          const list = d?.data?.movies as YtsMovie[] | undefined;
+          if (!Array.isArray(list)) throw new Error('No movies');
+          return list.map<MediaSummary>((m) => ({
+            imdbID: m.imdb_code || `yts-${m.id}`,
+            title: m.title,
+            year: m.year ? String(m.year) : '',
+            type: 'movie',
+            poster: m.medium_cover_image || m.large_cover_image || null,
+            rating: m.rating || null,
+            genres: m.genres || [],
+            overview: m.summary || '',
+            source: 'seed',
+          }));
+        })
+        .catch(() =>
+          fetch(ytsFallback, { signal })
+            .then((r) => r.json())
+            .then((d) => {
+              const list = d?.data?.movies as YtsMovie[] | undefined;
+              if (!Array.isArray(list)) return [];
+              return list.map<MediaSummary>((m) => ({
+                imdbID: m.imdb_code || `yts-${m.id}`,
+                title: m.title,
+                year: m.year ? String(m.year) : '',
+                type: 'movie',
+                poster: m.medium_cover_image || m.large_cover_image || null,
+                rating: m.rating || null,
+                genres: m.genres || [],
+                overview: m.summary || '',
+                source: 'seed',
+              }));
+            })
+            .catch(() => []),
+        ),
+    );
+  }
+
+  if (type === 'all' || type === 'series') {
+    // Fetch TV shows from TVMaze page
+    const tvPage = Math.max(0, page - 1);
+    promises.push(
+      fetch(`https://api.tvmaze.com/shows?page=${tvPage}`, { signal })
+        .then((r) => r.json())
+        .then((shows: TVMazeShow[]) => {
+          if (!Array.isArray(shows)) return [];
+          return shows.slice(0, 30).map<MediaSummary>((s) => {
+            const imdb = s.externals?.imdb ? (s.externals.imdb.startsWith('tt') ? s.externals.imdb : `tt${s.externals.imdb}`) : `tvmaze-${s.id}`;
+            return {
+              imdbID: imdb,
+              title: s.name,
+              year: s.premiered ? s.premiered.slice(0, 4) : '',
+              type: 'series',
+              poster: s.image?.original ?? s.image?.medium ?? null,
+              director: s.network?.name ?? s.webChannel?.name ?? undefined,
+              rating: s.rating?.average ?? null,
+              genres: s.genres ?? [],
+              overview: stripHtml(s.summary),
+              source: 'tvmaze',
+            };
+          });
+        })
+        .catch(() => []),
+    );
+  }
+
+  const results = await Promise.allSettled(promises);
+  const liveItems: MediaSummary[] = [];
+  for (const r of results) {
+    if (r.status === 'fulfilled' && Array.isArray(r.value)) {
+      liveItems.push(...r.value);
+    }
+  }
+
+  // Prepend curated masterpieces on page 1
+  const curated = CURATED_MASTERPIECES.filter((m) => (type === 'all' ? true : m.type === type));
+  const combined = page === 1 ? [...curated, ...liveItems] : liveItems;
+
+  // Deduplicate
+  const seen = new Set<string>();
+  const deduped: MediaSummary[] = [];
+
+  for (const item of combined) {
+    const key = item.imdbID && !item.imdbID.startsWith('yts-') && !item.imdbID.startsWith('tvmaze-')
+      ? item.imdbID
+      : `${normalizeTitle(item.title)}_${item.year.slice(0, 4)}_${item.type}`;
+
+    if (!seen.has(key)) {
+      seen.add(key);
+      deduped.push(item);
+    }
+  }
+
+  return deduped;
+}
+
+/* ------------------------------------------------------------------ */
+/* MULTI-SOURCE SEARCH: NEVER SHORT-CIRCUITS EXTERNAL APIS             */
 /* ------------------------------------------------------------------ */
 export async function aggregateMediaSearch(filters: SearchFilters, signal?: AbortSignal): Promise<SearchResponse> {
   const q = filters.query.trim();
 
-  // If query is empty, return popular / featured curated + trending
+  // If no search query, return the live browse catalog
   if (!q) {
-    const seed = CURATED_MASTERPIECES.filter((m) => {
-      if (filters.type !== 'all' && m.type !== filters.type) return false;
-      if (filters.year && !m.year.startsWith(filters.year)) return false;
-      return true;
-    });
+    const catalog = await fetchBrowseCatalog(filters.type, 1, signal);
     return {
-      results: seed,
-      total: seed.length,
+      results: catalog,
+      total: catalog.length,
       isDemo: true,
-      sourcesUsed: ['Curated Masterpieces Pool', 'TVMaze', 'Apple iTunes'],
+      sourcesUsed: ['Curated Vault', 'YTS Cinema', 'TVMaze', 'IMDb', 'Apple iTunes'],
     };
   }
 
-  // Filter curated seed matches first for instant high-res match
+  // Local matches (never stop here; always merge with external APIs!)
   const seedMatches = CURATED_MASTERPIECES.filter((m) => {
     if (filters.type !== 'all' && m.type !== filters.type) return false;
     if (filters.year && !m.year.startsWith(filters.year)) return false;
@@ -523,23 +792,33 @@ export async function aggregateMediaSearch(filters: SearchFilters, signal?: Abor
     return titleMatch || genreMatch;
   });
 
-  // Query TVMaze, iTunes, and OMDb concurrently
+  // Query ALL external databases concurrently without short-circuiting!
   const promises: Promise<MediaSummary[]>[] = [];
-  const sourcesUsed: string[] = ['Curated Pool'];
+  const sourcesUsed: string[] = ['Curated Vault'];
 
-  // Source 1: TVMaze (TV Shows)
-  if (filters.type === 'all' || filters.type === 'series') {
-    sourcesUsed.push('TVMaze Public API');
-    promises.push(fetchTVMazeSearch(q, signal));
-  }
+  // Source A: IMDb Open Search (Movies & Series)
+  sourcesUsed.push('IMDb Open Search');
+  promises.push(fetchImdbSearch(q, signal));
 
-  // Source 2: Apple iTunes (Feature Films)
+  // Source B: Apple iTunes (Feature Films)
   if (filters.type === 'all' || filters.type === 'movie') {
     sourcesUsed.push('Apple iTunes API');
     promises.push(fetchITunesMovies(q, signal));
   }
 
-  // Source 3: OMDb (if configured)
+  // Source C: YTS Movie Catalogue (Movies)
+  if (filters.type === 'all' || filters.type === 'movie') {
+    sourcesUsed.push('YTS Movie Catalogue');
+    promises.push(fetchYtsMovies(q, signal));
+  }
+
+  // Source D: TVMaze (TV Shows & Series)
+  if (filters.type === 'all' || filters.type === 'series') {
+    sourcesUsed.push('TVMaze Public API');
+    promises.push(fetchTVMazeSearch(q, signal));
+  }
+
+  // Source E: OMDb (if configured)
   if (isOmdbConfigured) {
     sourcesUsed.push('OMDb API');
     promises.push(fetchOMDb(q, filters.type, filters.year, signal));
@@ -554,23 +833,22 @@ export async function aggregateMediaSearch(filters: SearchFilters, signal?: Abor
     }
   }
 
-  // Merge and deduplicate by normalized title + year or imdbID
+  // Merge seed matches + live results and deduplicate
   const seenKeys = new Set<string>();
   const merged: MediaSummary[] = [];
 
-  // Seed matches have highest quality artwork, prioritize them first
   for (const item of [...seedMatches, ...liveResults]) {
-    const key = item.imdbID && !item.imdbID.startsWith('itunes-') && !item.imdbID.startsWith('tvmaze-')
+    // Filter by type
+    if (filters.type !== 'all' && item.type !== filters.type) continue;
+    // Filter by year if specified
+    if (filters.year && !item.year.startsWith(filters.year)) continue;
+
+    const key = item.imdbID && !item.imdbID.startsWith('itunes-') && !item.imdbID.startsWith('yts-') && !item.imdbID.startsWith('tvmaze-')
       ? item.imdbID
       : `${normalizeTitle(item.title)}_${item.year.slice(0, 4)}_${item.type}`;
 
     if (!seenKeys.has(key)) {
       seenKeys.add(key);
-
-      // Filter by type and year if provided
-      if (filters.type !== 'all' && item.type !== filters.type) continue;
-      if (filters.year && !item.year.startsWith(filters.year)) continue;
-
       merged.push(item);
     }
   }
@@ -585,11 +863,13 @@ export async function aggregateMediaSearch(filters: SearchFilters, signal?: Abor
 
 /** Detail lookup enriched with runtime, cast, director, and plot */
 export async function getAggregatedDetails(media: MediaSummary, signal?: AbortSignal): Promise<MediaDetails> {
-  // Check curated hero/masterpiece first
-  const curated = CURATED_MASTERPIECES.find((m) => m.imdbID === media.imdbID || m.title.toLowerCase() === media.title.toLowerCase());
+  const curated = CURATED_MASTERPIECES.find(
+    (m) => m.imdbID === media.imdbID || m.title.toLowerCase() === media.title.toLowerCase(),
+  );
   if (curated) {
     return {
       ...media,
+      poster: curated.poster || media.poster,
       genres: curated.genres ?? ['Drama'],
       runtimeMinutes: media.type === 'movie' ? 120 : 55,
       plot: curated.overview || media.overview || '',
@@ -600,7 +880,7 @@ export async function getAggregatedDetails(media: MediaSummary, signal?: AbortSi
     };
   }
 
-  // If TVMaze show, fetch direct metadata
+  // If TVMaze series, fetch direct metadata
   if (media.type === 'series' && media.imdbID) {
     try {
       const res = await fetch(`https://api.tvmaze.com/singlesearch/shows?q=${encodeURIComponent(media.title)}&embed=cast`, { signal });
@@ -608,7 +888,7 @@ export async function getAggregatedDetails(media: MediaSummary, signal?: AbortSi
         const data = await res.json();
         return {
           ...media,
-          poster: data.image?.original ?? media.poster,
+          poster: data.image?.original ?? data.image?.medium ?? media.poster,
           genres: data.genres ?? [],
           runtimeMinutes: data.runtime ?? data.averageRuntime ?? 50,
           plot: stripHtml(data.summary) || media.overview || '',
@@ -628,7 +908,7 @@ export async function getAggregatedDetails(media: MediaSummary, signal?: AbortSi
     ...media,
     genres: media.genres ?? [],
     runtimeMinutes: media.type === 'movie' ? 115 : 45,
-    plot: media.overview || 'A cinematic production tracked on CinePulse.',
+    plot: media.overview || 'A cinematic production tracked on CinePulse Archive.',
     imdbRating: media.rating ?? null,
     totalSeasons: media.type === 'series' ? 3 : null,
     totalEpisodes: media.type === 'series' ? 30 : null,

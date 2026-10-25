@@ -12,12 +12,13 @@ import { useAuth } from './hooks/useAuth';
 import { useMediaTracker } from './hooks/useMediaTracker';
 import {
   aggregateMediaSearch,
+  fetchBrowseCatalog,
   CURATED_MASTERPIECES,
   isOmdbConfigured,
   isTmdbConfigured,
 } from './services/mediaAggregatorService';
 import type { MediaSummary, SearchFilters, UserMediaItem } from './types/media';
-import { Film, AlertCircle } from 'lucide-react';
+import { Film, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function App() {
   const [view, setView] = useState<View>('explore');
@@ -30,7 +31,9 @@ export default function App() {
   const debouncedFilters = useDebounce(filters, 350);
   const [searchResults, setSearchResults] = useState<MediaSummary[]>(() => CURATED_MASTERPIECES);
   const [searching, setSearching] = useState(false);
-  const [sourcesUsed, setSourcesUsed] = useState<string[]>(['Curated Pool', 'TVMaze', 'Apple iTunes']);
+  const [sourcesUsed, setSourcesUsed] = useState<string[]>(['Curated Vault', 'YTS Cinema', 'TVMaze', 'IMDb', 'Apple iTunes']);
+  const [browsePage, setBrowsePage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [, startTransition] = useTransition();
 
   // Authentication & Tracker Hooks
@@ -62,6 +65,7 @@ export default function App() {
 
   // Sync navigation view with filter type when clicking Movies or TV Shows
   useEffect(() => {
+    setBrowsePage(1);
     if (view === 'movies') {
       setFilters((prev) => ({ ...prev, type: 'movie' }));
     } else if (view === 'tv') {
@@ -71,7 +75,7 @@ export default function App() {
     }
   }, [view]);
 
-  // Multi-Source Search effect
+  // Multi-Source Search & Live Catalog effect
   useEffect(() => {
     const controller = new AbortController();
     setSearching(true);
@@ -95,6 +99,27 @@ export default function App() {
     return () => controller.abort();
   }, [debouncedFilters]);
 
+  // Pagination for + Load More From Archive
+  const handleLoadMore = async () => {
+    const nextPage = browsePage + 1;
+    setLoadingMore(true);
+    try {
+      const more = await fetchBrowseCatalog(filters.type, nextPage);
+      startTransition(() => {
+        setSearchResults((prev) => {
+          const seen = new Set(prev.map((i) => i.imdbID));
+          const added = more.filter((i) => !seen.has(i.imdbID));
+          return [...prev, ...added];
+        });
+        setBrowsePage(nextPage);
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   // Filter watchlist items
   const filteredWatchlist = items.filter((item) => {
     if (watchlistTab === 'all') return true;
@@ -116,9 +141,9 @@ export default function App() {
     }
   };
 
-  // Curated subsets for editorial sections
-  const popularFilms = CURATED_MASTERPIECES.filter((m) => m.type === 'movie').slice(0, 8);
-  const acclaimedSeries = CURATED_MASTERPIECES.filter((m) => m.type === 'series').slice(0, 8);
+  // Curated subsets for highlights
+  const movieResults = searchResults.filter((m) => m.type === 'movie');
+  const seriesResults = searchResults.filter((m) => m.type === 'series');
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0a0a0c] text-zinc-300">
@@ -145,7 +170,7 @@ export default function App() {
             <span className="flex h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
             <span className="hidden sm:inline">Active Aggregator Engine:</span>
             <span className="text-zinc-400">
-              TVMaze · Apple iTunes · {isOmdbConfigured ? 'OMDb (Live)' : 'OMDb (Demo)'} · {isTmdbConfigured ? 'TMDB (Live)' : 'TMDB (Seed)'}
+              IMDb Open Search · YTS Cinema · Apple iTunes · TVMaze · {isOmdbConfigured ? 'OMDb' : 'OMDb Demo'} · {isTmdbConfigured ? 'TMDB' : 'TMDB Seed'}
             </span>
           </div>
 
@@ -195,13 +220,13 @@ export default function App() {
             {/* Search Bar & Categorization */}
             <SearchBar filters={filters} onChange={setFilters} sourcesCount={sourcesUsed.length} />
 
-            {/* Live Search Results or Editorial Archive Grids */}
+            {/* Live Search Results OR Categorized Editorial Catalog */}
             {filters.query ? (
               <div className="space-y-4">
                 <div className="section-divider">
                   <span>SEARCH RESULTS FOR &ldquo;{filters.query}&rdquo;</span>
-                  <span className="text-[10px] text-zinc-500">
-                    {searching ? 'Querying databases…' : `${searchResults.length} titles found`}
+                  <span className="text-[10px] text-amber-500 font-mono">
+                    {searching ? 'Querying databases…' : `${searchResults.length} TITLES FOUND`}
                   </span>
                 </div>
 
@@ -236,15 +261,123 @@ export default function App() {
                     <Film size={36} className="mx-auto text-zinc-600" />
                     <h3 className="font-serif text-base font-bold text-white">No Archive Matches</h3>
                     <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-                      Try searching with another title, director name, or clear release year.
+                      Try searching with another title, director name, or clear the release year filter.
                     </p>
                   </div>
                 )}
               </div>
+            ) : view === 'movies' ? (
+              /* Dedicated Movies Tab Catalog (60+ Live Movies) */
+              <div className="space-y-6">
+                <div className="section-divider">
+                  <span>FEATURE MOVIES CATALOGUE</span>
+                  <span className="text-[10px] text-amber-500 font-mono">{movieResults.length} TITLES LOADED</span>
+                </div>
+
+                {searching ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-3 sm:gap-4">
+                    {Array.from({ length: 16 }).map((_, i) => (
+                      <SkeletonCard key={i} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-3 sm:gap-4">
+                    {movieResults.map((item) => (
+                      <MediaCard
+                        key={item.imdbID}
+                        media={item}
+                        tracked={byImdbId.get(item.imdbID)}
+                        onAdd={(m, s, l) => {
+                          if (!user) setShowAuthModal(true);
+                          else add(m, s, l);
+                        }}
+                        onEdit={(t) => setEditingItem(t)}
+                        onUpdate={update}
+                        onRemove={remove}
+                        onToggleWatched={toggleWatched}
+                        onToggleLiked={toggleLiked}
+                        onToggleWatchlist={toggleWatchlist}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* + Load More From Archive Button */}
+                <div className="flex justify-center pt-8 pb-4">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="btn-glass px-6 py-2.5 font-mono text-xs font-semibold uppercase tracking-wider text-amber-400 hover:border-amber-500/50 hover:bg-amber-500/10 transition"
+                  >
+                    {loadingMore ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 size={13} className="animate-spin" />
+                        <span>Accessing Archive Databases…</span>
+                      </span>
+                    ) : (
+                      <span>+ Load More From Archive</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : view === 'tv' ? (
+              /* Dedicated TV Series Tab Catalog (60+ Live Series) */
+              <div className="space-y-6">
+                <div className="section-divider">
+                  <span>PRESTIGE TELEVISION CATALOGUE</span>
+                  <span className="text-[10px] text-amber-500 font-mono">{seriesResults.length} TITLES LOADED</span>
+                </div>
+
+                {searching ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-3 sm:gap-4">
+                    {Array.from({ length: 16 }).map((_, i) => (
+                      <SkeletonCard key={i} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-3 sm:gap-4">
+                    {seriesResults.map((item) => (
+                      <MediaCard
+                        key={item.imdbID}
+                        media={item}
+                        tracked={byImdbId.get(item.imdbID)}
+                        onAdd={(m, s, l) => {
+                          if (!user) setShowAuthModal(true);
+                          else add(m, s, l);
+                        }}
+                        onEdit={(t) => setEditingItem(t)}
+                        onUpdate={update}
+                        onRemove={remove}
+                        onToggleWatched={toggleWatched}
+                        onToggleLiked={toggleLiked}
+                        onToggleWatchlist={toggleWatchlist}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* + Load More From Archive Button */}
+                <div className="flex justify-center pt-8 pb-4">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="btn-glass px-6 py-2.5 font-mono text-xs font-semibold uppercase tracking-wider text-amber-400 hover:border-amber-500/50 hover:bg-amber-500/10 transition"
+                  >
+                    {loadingMore ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 size={13} className="animate-spin" />
+                        <span>Accessing Archive Databases…</span>
+                      </span>
+                    ) : (
+                      <span>+ Load More From Archive</span>
+                    )}
+                  </button>
+                </div>
+              </div>
             ) : (
-              /* Editorial Showcase Feed */
+              /* Default Explore Showcase Feed (Curated Highlights + Full Live Archive) */
               <div className="space-y-11">
-                {/* Section 1: Popular on CinePulse This Week */}
+                {/* Section 1: Popular Picks */}
                 <section className="space-y-4">
                   <div className="section-divider">
                     <span>POPULAR SELECTIONS THIS WEEK</span>
@@ -272,62 +405,103 @@ export default function App() {
                 </section>
 
                 {/* Section 2: Timeless Feature Films */}
-                {view !== 'tv' && (
-                  <section className="space-y-4">
-                    <div className="section-divider">
-                      <span>TIMELESS FEATURE FILMS</span>
-                      <span className="text-[10px] text-zinc-500 font-mono">THEATRICAL MASTERPIECES</span>
-                    </div>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-3 sm:gap-4">
-                      {popularFilms.map((item) => (
-                        <MediaCard
-                          key={item.imdbID}
-                          media={item}
-                          tracked={byImdbId.get(item.imdbID)}
-                          onAdd={(m, s, l) => {
-                            if (!user) setShowAuthModal(true);
-                            else add(m, s, l);
-                          }}
-                          onEdit={(t) => setEditingItem(t)}
-                          onUpdate={update}
-                          onRemove={remove}
-                          onToggleWatched={toggleWatched}
-                          onToggleLiked={toggleLiked}
-                          onToggleWatchlist={toggleWatchlist}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                )}
+                <section className="space-y-4">
+                  <div className="section-divider">
+                    <span>FEATURE FILMS SPOTLIGHT</span>
+                    <span className="text-[10px] text-zinc-500 font-mono">THEATRICAL MASTERPIECES</span>
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-3 sm:gap-4">
+                    {movieResults.slice(0, 8).map((item) => (
+                      <MediaCard
+                        key={item.imdbID}
+                        media={item}
+                        tracked={byImdbId.get(item.imdbID)}
+                        onAdd={(m, s, l) => {
+                          if (!user) setShowAuthModal(true);
+                          else add(m, s, l);
+                        }}
+                        onEdit={(t) => setEditingItem(t)}
+                        onUpdate={update}
+                        onRemove={remove}
+                        onToggleWatched={toggleWatched}
+                        onToggleLiked={toggleLiked}
+                        onToggleWatchlist={toggleWatchlist}
+                      />
+                    ))}
+                  </div>
+                </section>
 
                 {/* Section 3: Prestige Television Series */}
-                {view !== 'movies' && (
-                  <section className="space-y-4">
-                    <div className="section-divider">
-                      <span>PRESTIGE TELEVISION SERIES</span>
-                      <span className="text-[10px] text-zinc-500 font-mono">EPISODIC EXCELLENCE</span>
-                    </div>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-3 sm:gap-4">
-                      {acclaimedSeries.map((item) => (
-                        <MediaCard
-                          key={item.imdbID}
-                          media={item}
-                          tracked={byImdbId.get(item.imdbID)}
-                          onAdd={(m, s, l) => {
-                            if (!user) setShowAuthModal(true);
-                            else add(m, s, l);
-                          }}
-                          onEdit={(t) => setEditingItem(t)}
-                          onUpdate={update}
-                          onRemove={remove}
-                          onToggleWatched={toggleWatched}
-                          onToggleLiked={toggleLiked}
-                          onToggleWatchlist={toggleWatchlist}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                )}
+                <section className="space-y-4">
+                  <div className="section-divider">
+                    <span>PRESTIGE TELEVISION SERIES</span>
+                    <span className="text-[10px] text-zinc-500 font-mono">EPISODIC EXCELLENCE</span>
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-3 sm:gap-4">
+                    {seriesResults.slice(0, 8).map((item) => (
+                      <MediaCard
+                        key={item.imdbID}
+                        media={item}
+                        tracked={byImdbId.get(item.imdbID)}
+                        onAdd={(m, s, l) => {
+                          if (!user) setShowAuthModal(true);
+                          else add(m, s, l);
+                        }}
+                        onEdit={(t) => setEditingItem(t)}
+                        onUpdate={update}
+                        onRemove={remove}
+                        onToggleWatched={toggleWatched}
+                        onToggleLiked={toggleLiked}
+                        onToggleWatchlist={toggleWatchlist}
+                      />
+                    ))}
+                  </div>
+                </section>
+
+                {/* Section 4: Full Multi-Database Archive Feed */}
+                <section className="space-y-4">
+                  <div className="section-divider">
+                    <span>LIVE MULTI-DATABASE ARCHIVE</span>
+                    <span className="text-[10px] text-amber-500 font-mono">{searchResults.length} TITLES IN FEED</span>
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-3 sm:gap-4">
+                    {searchResults.map((item) => (
+                      <MediaCard
+                        key={item.imdbID}
+                        media={item}
+                        tracked={byImdbId.get(item.imdbID)}
+                        onAdd={(m, s, l) => {
+                          if (!user) setShowAuthModal(true);
+                          else add(m, s, l);
+                        }}
+                        onEdit={(t) => setEditingItem(t)}
+                        onUpdate={update}
+                        onRemove={remove}
+                        onToggleWatched={toggleWatched}
+                        onToggleLiked={toggleLiked}
+                        onToggleWatchlist={toggleWatchlist}
+                      />
+                    ))}
+                  </div>
+
+                  {/* + Load More From Archive Button */}
+                  <div className="flex justify-center pt-8 pb-4">
+                    <button
+                      onClick={handleLoadMore}
+                      disabled={loadingMore}
+                      className="btn-glass px-6 py-2.5 font-mono text-xs font-semibold uppercase tracking-wider text-amber-400 hover:border-amber-500/50 hover:bg-amber-500/10 transition"
+                    >
+                      {loadingMore ? (
+                        <span className="flex items-center gap-2">
+                          <Loader2 size={13} className="animate-spin" />
+                          <span>Accessing Archive Databases…</span>
+                        </span>
+                      ) : (
+                        <span>+ Load More From Archive</span>
+                      )}
+                    </button>
+                  </div>
+                </section>
               </div>
             )}
           </div>
@@ -446,7 +620,7 @@ export default function App() {
             <span>CINEMA VAULT & MEDIA TRACKER</span>
           </div>
           <p className="text-zinc-500">
-            Powered by Multi-Source Aggregator: TVMaze · Apple iTunes · OMDb · TMDB
+            Powered by Multi-Source Aggregator: IMDb Open Search · YTS · Apple iTunes · TVMaze · OMDb · TMDB
           </p>
         </div>
       </footer>
