@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Eye, Heart, Clock, Plus, Star, Film } from 'lucide-react';
+import { Eye, Heart, Bookmark, Plus, Star, Film } from 'lucide-react';
 import type { MediaSummary, UserMediaItem } from '../types/media';
 import { FEATURED_HERO_BACKDROPS } from '../services/mediaAggregatorService';
 
@@ -55,7 +55,7 @@ export default function FeaturedBackdropHeader({
     }
   };
 
-  const handleClockClick = () => {
+  const handleBookmarkClick = () => {
     if (tracked) {
       onToggleWatchlist(tracked);
     } else {
@@ -63,105 +63,119 @@ export default function FeaturedBackdropHeader({
     }
   };
 
+  const isCompleted = tracked?.status === 'completed';
+  const isLiked = Boolean(tracked?.liked);
+  const isBookmarked = tracked?.status === 'plan_to_watch';
+
   return (
-    <section aria-label="Featured Film" className="relative -mx-4 -mt-6 sm:-mt-8 mb-8 overflow-hidden bg-[#14181c]">
-      {/* Cinematic wide backdrop with multiple layer vignette fades */}
-      <div className="relative h-[380px] sm:h-[460px] md:h-[520px] w-full overflow-hidden">
+    <section aria-label="Featured Selection" className="relative -mx-4 -mt-6 sm:-mt-8 mb-10 overflow-hidden bg-[#0a0a0c]">
+      {/* Cinematic widescreen backdrop with atmospheric vignette */}
+      <div className="relative h-[420px] sm:h-[480px] md:h-[540px] w-full overflow-hidden">
         <img
           key={featured.id}
           src={featured.backdropUrl}
           alt={`${featured.title} backdrop`}
-          className="h-full w-full object-cover object-center filter brightness-[0.8] contrast-[1.08] transition-opacity duration-700 animate-fadeIn"
+          className="h-full w-full object-cover object-center filter brightness-[0.75] contrast-[1.12] transition-opacity duration-700 animate-fadeIn"
         />
 
-        {/* Bottom-to-top Letterboxd slate gradient fade */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#14181c] via-[#14181c]/70 to-transparent" />
+        {/* Multi-layered cinematic vignette fading into obsidian #0a0a0c */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0c] via-[#0a0a0c]/70 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0c]/95 via-transparent to-[#0a0a0c]/80" />
+        <div className="absolute inset-0 bg-radial-gradient from-transparent via-[#0a0a0c]/20 to-[#0a0a0c]/90 pointer-events-none" />
 
-        {/* Side vignette gradients */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#14181c]/90 via-transparent to-[#14181c]/70" />
-        <div className="absolute inset-0 bg-radial-gradient from-transparent via-[#14181c]/30 to-[#14181c]/80 pointer-events-none" />
-
-        {/* Content Overlay */}
+        {/* Content Container */}
         <div className="absolute inset-0 flex flex-col justify-end px-4 sm:px-8 pb-8 max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
             {/* Title & Metadata (Left Column) */}
-            <div className="md:col-span-8 space-y-3">
-              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#99aabb]">
-                <span className="flex items-center gap-1.5 text-[#00e054]">
-                  <Film size={13} /> FEATURED CINEMA
+            <div className="md:col-span-8 space-y-3.5">
+              {/* Glassmorphic 35mm Badge & Monospace Pills */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-widest text-amber-400 backdrop-blur-md">
+                  <Film size={12} className="text-amber-500" />
+                  <span>35MM CURATED SELECTION</span>
                 </span>
-                <span>•</span>
-                <span>{featured.type === 'movie' ? 'FILM' : 'SERIES'}</span>
-                <span>•</span>
-                <span className="text-white">{featured.year}</span>
-                {featured.rating && (
-                  <>
-                    <span>•</span>
-                    <span className="flex items-center gap-1 text-[#ffc000]">
-                      <Star size={12} fill="currentColor" /> {featured.rating}
+
+                <div className="flex flex-wrap items-center gap-1.5 font-mono text-[11px] text-zinc-400">
+                  <span className="rounded bg-white/[0.06] border border-white/[0.08] px-2 py-0.5">
+                    [ {featured.year} ]
+                  </span>
+                  <span className="rounded bg-white/[0.06] border border-white/[0.08] px-2 py-0.5 text-zinc-300">
+                    [ {featured.type === 'movie' ? 'FEATURE FILM' : 'SERIES'} ]
+                  </span>
+                  {featured.rating && (
+                    <span className="flex items-center gap-1 rounded bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-amber-400 font-semibold">
+                      <Star size={11} fill="currentColor" />
+                      <span>★ {featured.rating} IMDb</span>
                     </span>
-                  </>
-                )}
+                  )}
+                  <span className="hidden sm:inline rounded bg-white/[0.06] border border-white/[0.08] px-2 py-0.5 text-zinc-400">
+                    [ {featured.genres.slice(0, 2).join(' / ').toUpperCase()} ]
+                  </span>
+                </div>
               </div>
 
-              <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white drop-shadow-md">
+              {/* Bold Editorial Serif Title */}
+              <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white drop-shadow-md">
                 {featured.title}
               </h1>
 
-              <p className="text-xs sm:text-sm font-medium tracking-wide text-[#99aabb]">
+              {/* Director Attribution */}
+              <p className="font-sans text-xs sm:text-sm text-zinc-400">
                 {featured.type === 'movie' ? 'Directed by' : 'Created by'}{' '}
-                <span className="text-white font-semibold">{featured.directorOrCreator}</span>
+                <span className="text-zinc-100 font-semibold">{featured.directorOrCreator}</span>
               </p>
 
+              {/* Tagline */}
               {featured.tagline && (
-                <p className="italic text-xs sm:text-sm text-slate-300 font-serif line-clamp-1 border-l-2 border-[#00e054] pl-2.5">
+                <p className="italic text-xs sm:text-sm text-amber-200/90 font-serif line-clamp-1 border-l-2 border-amber-500/80 pl-3">
                   &ldquo;{featured.tagline}&rdquo;
                 </p>
               )}
 
-              <p className="hidden sm:block text-xs sm:text-sm text-[#99aabb] max-w-2xl line-clamp-2 leading-relaxed">
+              {/* Synopsis */}
+              <p className="hidden sm:block text-xs sm:text-sm text-zinc-400 max-w-2xl line-clamp-2 leading-relaxed">
                 {featured.synopsis}
               </p>
 
-              {/* Action Buttons Row */}
+              {/* Dark-Glass Action Pills Row */}
               <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-2">
                 <button
                   onClick={handleEyeClick}
-                  title={tracked?.status === 'completed' ? 'Marked as watched' : 'Mark watched'}
-                  className={`inline-flex items-center gap-1.5 rounded-sm px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition ${
-                    tracked?.status === 'completed'
-                      ? 'bg-[#00e054] text-[#14181c]'
-                      : 'border border-[#2c3440] bg-[#1f252c]/90 text-white hover:border-[#00e054] hover:text-[#00e054]'
+                  title={isCompleted ? 'Marked as Watched' : 'Mark Watched'}
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-xs font-semibold backdrop-blur-md transition ${
+                    isCompleted
+                      ? 'border border-emerald-500/50 bg-emerald-500 text-zinc-950 font-bold'
+                      : 'border border-white/15 bg-white/[0.08] text-zinc-200 hover:border-emerald-400 hover:text-emerald-400'
                   }`}
                 >
-                  <Eye size={15} />
-                  <span>{tracked?.status === 'completed' ? 'Watched' : 'Watch'}</span>
+                  <Eye size={14} />
+                  <span>{isCompleted ? 'Watched' : 'Watch'}</span>
                 </button>
 
                 <button
                   onClick={handleHeartClick}
-                  title={tracked?.liked ? 'Liked' : 'Like'}
-                  className={`inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition ${
-                    tracked?.liked
-                      ? 'bg-[#ff8000] text-white'
-                      : 'border border-[#2c3440] bg-[#1f252c]/90 text-white hover:border-[#ff8000] hover:text-[#ff8000]'
+                  title={isLiked ? 'Favorited' : 'Add to Favorites'}
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-xs font-semibold backdrop-blur-md transition ${
+                    isLiked
+                      ? 'border border-rose-500/50 bg-rose-500 text-white font-bold'
+                      : 'border border-white/15 bg-white/[0.08] text-zinc-200 hover:border-rose-400 hover:text-rose-400'
                   }`}
                 >
-                  <Heart size={15} fill={tracked?.liked ? 'currentColor' : 'none'} />
-                  <span>{tracked?.liked ? 'Liked' : 'Like'}</span>
+                  <Heart size={14} fill={isLiked ? 'currentColor' : 'none'} />
+                  <span>{isLiked ? 'Favorited' : 'Favorite'}</span>
                 </button>
 
                 <button
-                  onClick={handleClockClick}
-                  title={tracked?.status === 'plan_to_watch' ? 'In Watchlist' : 'Add to Watchlist'}
-                  className={`inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition ${
-                    tracked?.status === 'plan_to_watch'
-                      ? 'bg-[#40bcf4] text-[#14181c]'
-                      : 'border border-[#2c3440] bg-[#1f252c]/90 text-white hover:border-[#40bcf4] hover:text-[#40bcf4]'
+                  onClick={handleBookmarkClick}
+                  title={isBookmarked ? 'In Vault' : 'Save to Vault'}
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-xs font-semibold backdrop-blur-md transition ${
+                    isBookmarked
+                      ? 'border border-indigo-500/50 bg-indigo-500 text-white font-bold'
+                      : 'border border-white/15 bg-white/[0.08] text-zinc-200 hover:border-indigo-400 hover:text-indigo-400'
                   }`}
                 >
-                  <Clock size={15} />
-                  <span>Watchlist</span>
+                  <Bookmark size={14} fill={isBookmarked ? 'currentColor' : 'none'} />
+                  <span>{isBookmarked ? 'In Vault' : 'Save'}</span>
                 </button>
 
                 <button
@@ -169,18 +183,18 @@ export default function FeaturedBackdropHeader({
                     if (tracked) onEdit(tracked);
                     else onQuickLog(asSummary);
                   }}
-                  className="lb-btn-green"
+                  className="btn-amber"
                 >
-                  <Plus size={15} />
-                  <span>{tracked ? 'Edit Log' : '+ Log / Review'}</span>
+                  <Plus size={14} strokeWidth={2.5} />
+                  <span>{tracked ? 'Edit Entry' : 'Log / Rate'}</span>
                 </button>
               </div>
             </div>
 
-            {/* Carousel Selector Thumbnails (Right Column) */}
+            {/* 7-Title Carousel Switcher (Right Column) */}
             <div className="md:col-span-4 flex flex-col items-start md:items-end justify-end space-y-2">
-              <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#667788]">
-                Featured Highlights ({currentIndex + 1}/{FEATURED_HERO_BACKDROPS.length})
+              <span className="font-mono text-[10px] uppercase font-bold tracking-widest text-zinc-500">
+                ARCHIVE SPOTLIGHT [{currentIndex + 1} / {FEATURED_HERO_BACKDROPS.length}]
               </span>
               <div className="flex gap-2 overflow-x-auto pb-1 max-w-full">
                 {FEATURED_HERO_BACKDROPS.map((item, idx) => (
@@ -188,10 +202,10 @@ export default function FeaturedBackdropHeader({
                     key={item.id}
                     onClick={() => setCurrentIndex(idx)}
                     title={item.title}
-                    className={`relative shrink-0 w-12 sm:w-14 aspect-[2/3] rounded-[2px] overflow-hidden transition-all duration-200 ${
+                    className={`relative shrink-0 w-12 sm:w-14 aspect-[2/3] rounded-md overflow-hidden transition-all duration-200 ${
                       currentIndex === idx
-                        ? 'ring-2 ring-[#00e054] scale-105 shadow-md shadow-black'
-                        : 'opacity-50 hover:opacity-90 ring-1 ring-white/10'
+                        ? 'ring-2 ring-amber-400 scale-105 shadow-lg shadow-black'
+                        : 'opacity-40 hover:opacity-90 ring-1 ring-white/10'
                     }`}
                   >
                     <img src={item.posterUrl} alt={item.title} className="w-full h-full object-cover" />

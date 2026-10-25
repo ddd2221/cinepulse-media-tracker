@@ -1,7 +1,7 @@
 import { LogIn, LogOut, Search, Plus, User } from 'lucide-react';
 import type { AppUser } from '../types/media';
 
-export type View = 'discover' | 'films' | 'series' | 'watchlist' | 'stats';
+export type View = 'explore' | 'movies' | 'tv' | 'vault' | 'analytics';
 
 interface Props {
   view: View;
@@ -27,120 +27,137 @@ export default function Navbar({
   onSearchChange,
 }: Props) {
   return (
-    <header className="sticky top-0 z-40 border-b border-[#2c3440] bg-[#14181c]/95 backdrop-blur-md">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2.5">
-        {/* Brand Logo with Letterboxd 3-Color Dots */}
-        <div className="flex items-center gap-6">
+    <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#0a0a0c]/90 backdrop-blur-md">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
+        {/* CinePulse Brand Mark: Geometric Aperture + ARCHIVE badge */}
+        <div className="flex items-center gap-7">
           <a
             href="/"
             onClick={(e) => {
               e.preventDefault();
-              onViewChange('discover');
+              onViewChange('explore');
             }}
-            className="flex items-center gap-2 group cursor-pointer"
+            className="flex items-center gap-2.5 group cursor-pointer"
             aria-label="CinePulse home"
           >
-            {/* Iconic Letterboxd-style Trio Dots: Orange, Green, Blue */}
-            <div className="flex items-center gap-1">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#ff8000]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-[#00e054]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-[#40bcf4]" />
+            {/* Minimalist Geometric Film-Frame / Aperture Icon */}
+            <div className="relative flex h-7 w-7 items-center justify-center rounded-md border border-white/[0.12] bg-[#121318] shadow-inner group-hover:border-amber-500/50 transition">
+              <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 text-amber-500">
+                <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.75" />
+                <path d="M12 3v3M12 18v3M3 12h3M18 12h3M6.5 6.5l2.2 2.2M15.3 15.3l2.2 2.2M6.5 17.5l2.2-2.2M15.3 8.7l2.2-2.2" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" opacity="0.8" />
+              </svg>
             </div>
-            <span className="font-extrabold tracking-widest text-sm text-white group-hover:text-[#00e054] transition">
-              CINE<span className="text-[#00e054]">PULSE</span>
-            </span>
+
+            <div className="flex items-center gap-2">
+              <span className="font-sans text-sm font-extrabold tracking-[0.2em] text-white group-hover:text-amber-400 transition">
+                CINE<span className="text-amber-500">PULSE</span>
+              </span>
+              <span className="font-mono text-[9px] uppercase tracking-widest text-amber-400/90 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
+                ARCHIVE
+              </span>
+            </div>
           </a>
 
-          {/* Letterboxd Uppercase Tracked Navigation Links */}
-          <nav aria-label="Primary" className="hidden md:flex items-center gap-1">
+          {/* Floating Editorial Navigation Tabs */}
+          <nav aria-label="Primary" className="hidden md:flex items-center gap-1 text-xs">
             <button
-              onClick={() => onViewChange('discover')}
-              className={`px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] transition ${
-                view === 'discover' ? 'text-white' : 'text-[#99aabb] hover:text-white'
+              onClick={() => onViewChange('explore')}
+              className={`px-3 py-1.5 rounded-md font-medium transition ${
+                view === 'explore'
+                  ? 'bg-white/[0.08] text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
               }`}
             >
-              Discover
+              Explore
             </button>
             <button
-              onClick={() => onViewChange('films')}
-              className={`px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] transition ${
-                view === 'films' ? 'text-white' : 'text-[#99aabb] hover:text-white'
+              onClick={() => onViewChange('movies')}
+              className={`px-3 py-1.5 rounded-md font-medium transition ${
+                view === 'movies'
+                  ? 'bg-white/[0.08] text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
               }`}
             >
-              Films
+              Movies
             </button>
             <button
-              onClick={() => onViewChange('series')}
-              className={`px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] transition ${
-                view === 'series' ? 'text-white' : 'text-[#99aabb] hover:text-white'
+              onClick={() => onViewChange('tv')}
+              className={`px-3 py-1.5 rounded-md font-medium transition ${
+                view === 'tv'
+                  ? 'bg-white/[0.08] text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
               }`}
             >
-              Series
+              TV Shows
             </button>
             <button
-              onClick={() => onViewChange('watchlist')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] transition ${
-                view === 'watchlist' ? 'text-white' : 'text-[#99aabb] hover:text-white'
+              onClick={() => onViewChange('vault')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition ${
+                view === 'vault'
+                  ? 'bg-white/[0.08] text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
               }`}
             >
-              <span>Watchlist</span>
+              <span>My Vault</span>
               {listCount > 0 && (
-                <span className="rounded-[2px] bg-[#2c3440] px-1 text-[10px] text-[#40bcf4]">
+                <span className="font-mono text-[10px] rounded px-1.5 py-0.2 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                   {listCount}
                 </span>
               )}
             </button>
             <button
-              onClick={() => onViewChange('stats')}
-              className={`px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] transition ${
-                view === 'stats' ? 'text-white' : 'text-[#99aabb] hover:text-white'
+              onClick={() => onViewChange('analytics')}
+              className={`px-3 py-1.5 rounded-md font-medium transition ${
+                view === 'analytics'
+                  ? 'bg-white/[0.08] text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
               }`}
             >
-              Diary & Stats
+              Analytics
             </button>
           </nav>
         </div>
 
-        {/* Right Section: Compact Search, + LOG CTA, and Auth */}
+        {/* Right Actions: Compact Search + Amber Quick Track CTA + Session */}
         <div className="flex items-center gap-3">
-          {/* Compact Integrated Search */}
+          {/* Integrated Search Input */}
           <div className="relative hidden sm:block w-44 md:w-56">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[#667788]" size={13} />
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" size={13} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => {
                 onSearchChange(e.target.value);
-                if (view !== 'discover' && view !== 'films' && view !== 'series') {
-                  onViewChange('discover');
+                if (view !== 'explore' && view !== 'movies' && view !== 'tv') {
+                  onViewChange('explore');
                 }
               }}
-              placeholder="Search films, series…"
-              className="w-full rounded-sm border border-[#2c3440] bg-[#1f252c] py-1 pl-8 pr-2 text-xs text-white placeholder:text-[#667788] focus:border-[#00e054] focus:outline-none"
+              placeholder="Search archive…"
+              className="w-full rounded-md border border-white/[0.08] bg-[#121318] py-1.5 pl-8 pr-2.5 text-xs text-white placeholder:text-zinc-600 focus:border-amber-500/60 focus:outline-none focus:ring-1 focus:ring-amber-500/30"
             />
           </div>
 
-          {/* Letterboxd Signature + LOG CTA Button */}
+          {/* CinePulse Bespoke Quick Track Button */}
           <button
             onClick={onOpenLog}
-            className="lb-btn-green shadow-sm shadow-[#00e054]/20"
-            title="Log a film or series"
+            className="btn-amber"
+            title="Add title to your vault"
           >
-            <Plus size={14} strokeWidth={3} />
-            <span>LOG</span>
+            <Plus size={14} strokeWidth={2.5} />
+            <span>Add Entry</span>
           </button>
 
-          {/* Profile / Demo Indicator */}
+          {/* User Account / Demo Mode Pill */}
           {user ? (
             <div className="flex items-center gap-2">
-              <span className="hidden lg:flex items-center gap-1 text-[11px] font-semibold text-[#99aabb]">
-                <User size={13} className="text-[#00e054]" />
-                <span className="text-white max-w-[90px] truncate">{user.name}</span>
+              <span className="hidden lg:flex items-center gap-1.5 text-xs text-zinc-400">
+                <User size={13} className="text-amber-500" />
+                <span className="text-white max-w-[100px] truncate">{user.name}</span>
               </span>
               <button
                 onClick={onSignOut}
                 aria-label="Sign out"
-                className="rounded-sm border border-[#2c3440] bg-[#1f252c] p-1.5 text-[#99aabb] hover:border-red-500/50 hover:text-red-400 transition"
+                className="rounded-md border border-white/[0.08] bg-[#121318] p-1.5 text-zinc-400 hover:border-rose-500/40 hover:text-rose-400 transition"
                 title="Sign out"
               >
                 <LogOut size={14} />
@@ -149,7 +166,7 @@ export default function Navbar({
           ) : (
             <button
               onClick={onSignInClick}
-              className="inline-flex items-center gap-1.5 rounded-sm border border-[#2c3440] bg-[#1f252c] px-3 py-1 text-xs font-semibold text-[#99aabb] hover:text-white hover:border-[#455566] transition"
+              className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.08] bg-[#121318] px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:border-white/20 hover:text-white transition"
             >
               <LogIn size={13} />
               <span className="hidden sm:inline">Sign In</span>
@@ -158,37 +175,37 @@ export default function Navbar({
         </div>
       </div>
 
-      {/* Mobile Secondary Navigation Row */}
-      <nav aria-label="Mobile Navigation" className="flex md:hidden items-center justify-around border-t border-[#2c3440] bg-[#14181c] py-2 px-2">
+      {/* Mobile Sub-Navigation */}
+      <nav aria-label="Mobile Navigation" className="flex md:hidden items-center justify-around border-t border-white/[0.08] bg-[#0a0a0c] py-2 px-2 text-xs">
         <button
-          onClick={() => onViewChange('discover')}
-          className={`text-[10px] font-bold uppercase tracking-wider ${view === 'discover' ? 'text-[#00e054]' : 'text-[#99aabb]'}`}
+          onClick={() => onViewChange('explore')}
+          className={`font-medium ${view === 'explore' ? 'text-amber-400' : 'text-zinc-400'}`}
         >
-          Discover
+          Explore
         </button>
         <button
-          onClick={() => onViewChange('films')}
-          className={`text-[10px] font-bold uppercase tracking-wider ${view === 'films' ? 'text-[#00e054]' : 'text-[#99aabb]'}`}
+          onClick={() => onViewChange('movies')}
+          className={`font-medium ${view === 'movies' ? 'text-amber-400' : 'text-zinc-400'}`}
         >
-          Films
+          Movies
         </button>
         <button
-          onClick={() => onViewChange('series')}
-          className={`text-[10px] font-bold uppercase tracking-wider ${view === 'series' ? 'text-[#00e054]' : 'text-[#99aabb]'}`}
+          onClick={() => onViewChange('tv')}
+          className={`font-medium ${view === 'tv' ? 'text-amber-400' : 'text-zinc-400'}`}
         >
-          Series
+          TV Shows
         </button>
         <button
-          onClick={() => onViewChange('watchlist')}
-          className={`text-[10px] font-bold uppercase tracking-wider ${view === 'watchlist' ? 'text-[#00e054]' : 'text-[#99aabb]'}`}
+          onClick={() => onViewChange('vault')}
+          className={`font-medium ${view === 'vault' ? 'text-amber-400' : 'text-zinc-400'}`}
         >
-          Watchlist
+          My Vault
         </button>
         <button
-          onClick={() => onViewChange('stats')}
-          className={`text-[10px] font-bold uppercase tracking-wider ${view === 'stats' ? 'text-[#00e054]' : 'text-[#99aabb]'}`}
+          onClick={() => onViewChange('analytics')}
+          className={`font-medium ${view === 'analytics' ? 'text-amber-400' : 'text-zinc-400'}`}
         >
-          Stats
+          Analytics
         </button>
       </nav>
     </header>
