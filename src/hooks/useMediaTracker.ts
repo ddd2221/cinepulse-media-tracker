@@ -6,9 +6,35 @@ import type { AppUser, MediaStats, MediaSummary, UserMediaItem, UserMediaPatch }
 const TABLE = 'user_media_list';
 const storageKey = (userId: string) => `cinepulse:list:${userId}`;
 
+const VERIFIED_SERIES_POSTERS: Record<string, string> = {
+  tt7660850: 'https://static.tvmaze.com/uploads/images/original_untouched/453/1134275.jpg', // Succession
+  tt14452776: 'https://static.tvmaze.com/uploads/images/original_untouched/629/1574642.jpg', // The Bear
+  tt7366338: 'https://static.tvmaze.com/uploads/images/original_untouched/193/482599.jpg', // Chernobyl
+  tt11280740: 'https://static.tvmaze.com/uploads/images/original_untouched/548/1371406.jpg', // Severance
+  tt4574334: 'https://static.tvmaze.com/uploads/images/original_untouched/595/1489169.jpg', // Stranger Things
+  tt2085059: 'https://static.tvmaze.com/uploads/images/original_untouched/564/1411764.jpg', // Black Mirror
+  tt0306414: 'https://static.tvmaze.com/uploads/images/original_untouched/504/1260189.jpg', // The Wire
+};
+
+const sanitizeItems = (items: UserMediaItem[]): UserMediaItem[] => {
+  return items.map((item) => {
+    if (VERIFIED_SERIES_POSTERS[item.imdb_id] && item.poster !== VERIFIED_SERIES_POSTERS[item.imdb_id]) {
+      return { ...item, poster: VERIFIED_SERIES_POSTERS[item.imdb_id] };
+    }
+    return item;
+  });
+};
+
 const readLocal = (userId: string): UserMediaItem[] => {
   try {
-    return JSON.parse(localStorage.getItem(storageKey(userId)) ?? '[]') as UserMediaItem[];
+    const raw = localStorage.getItem(storageKey(userId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as UserMediaItem[];
+    const sanitized = sanitizeItems(parsed);
+    if (JSON.stringify(parsed) !== JSON.stringify(sanitized)) {
+      localStorage.setItem(storageKey(userId), JSON.stringify(sanitized));
+    }
+    return sanitized;
   } catch {
     return [];
   }
@@ -83,7 +109,7 @@ const demoSeed = (userId: string): UserMediaItem[] => {
       title: 'Chernobyl',
       year: '2019',
       media_type: 'series',
-      poster: 'https://static.tvmaze.com/uploads/images/original_untouched/341/854930.jpg',
+      poster: 'https://static.tvmaze.com/uploads/images/original_untouched/193/482599.jpg',
       genres: ['Drama', 'History', 'Thriller'],
       runtime_minutes: 65,
       total_episodes: 5,
